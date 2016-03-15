@@ -47,6 +47,7 @@ batch_size = 128
 
 # hidden_layer_activation_fn = tf.nn.relu # achieved 84% test accuracy
 hidden_layer_activation_fn = tf.nn.elu # achieved 89.2% test
+identity_activation = lambda x: x
 
 
 def get_batch(data, batch_num):
@@ -66,21 +67,22 @@ def get_batches(data):
         yield get_batch(data, i)
 
 
+def dense_layer(x, activation, size):
+    weights = tf.Variable(
+            tf.truncated_normal(size, name="weights"))
+    biases = tf.Variable(tf.zeros([size[-1]]), name="biases")
+    dense_out = activation(tf.matmul(x, weights) + biases)
+    return dense_out
+
+
 def inference(x):
     # Hidden Layer.
     hidden_layer_size = 1024
-    weights_h = tf.Variable(
-        tf.truncated_normal([image_size * image_size, hidden_layer_size]))
-    biases_h = tf.Variable(tf.zeros([hidden_layer_size]))
-    hidden_out = hidden_layer_activation_fn(tf.matmul(x, weights_h) + biases_h)
+    with tf.variable_scope("dense1") as scope:
+        dense1_out = dense_layer(x, hidden_layer_activation_fn, [image_size * image_size, hidden_layer_size])
+    with tf.variable_scope("dense2") as scope:
+        logits = dense_layer(dense1_out, identity_activation, [hidden_layer_size, num_labels])
 
-    # Output Layer.
-    weights = tf.Variable(
-        tf.truncated_normal([hidden_layer_size, num_labels]))
-    biases = tf.Variable(tf.zeros([num_labels]))
-
-    # Training computation.
-    logits = tf.matmul(hidden_out, weights) + biases
     return logits
 
 
@@ -133,13 +135,6 @@ with graph.as_default():
     train_op = training(loss_op)
 
     evaluate_op = evaluation(logits_op, y_)
-
-    # Predictions for the training, validation, and test data.
-    # train_prediction = tf.nn.softmax(logits)
-    # valid_prediction = tf.nn.softmax(
-    #     tf.matmul(hidden_layer_activation_fn(tf.matmul(tf_valid_dataset, weights_h) + biases_h), weights) + biases)
-    # test_prediction = tf.nn.softmax(
-    #     tf.matmul(hidden_layer_activation_fn(tf.matmul(tf_test_dataset, weights_h) + biases_h), weights) + biases)
 
 
 num_steps = 3001
