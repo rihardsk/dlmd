@@ -71,23 +71,23 @@ def get_batches(data):
 
 def dense_layer(x, activation, size):
     weights = tf.Variable(
-            tf.truncated_normal(size, name="weights"))
+            tf.truncated_normal(size, name="weights", stddev=0.1))
     biases = tf.Variable(tf.zeros([size[-1]]), name="biases")
     dense_out = activation(tf.matmul(x, weights) + biases)
     return dense_out
 
 
-def inference(x, keep_prob):
+def inference(x, keep_probs):
     # Hidden Layers.
     with tf.variable_scope("dense1") as scope:
         dense1_out = dense_layer(x, hidden_layer_activation_fn, [image_size * image_size, 1024])
-        dense1_drop = tf.nn.dropout(dense1_out, keep_prob)
+        dense1_drop = tf.nn.dropout(dense1_out, keep_probs[0])
     with tf.variable_scope("dense2") as scope:
         dense2_out = dense_layer(dense1_drop, hidden_layer_activation_fn, [1024, 512])
-        dense2_drop = tf.nn.dropout(dense2_out, keep_prob)
+        dense2_drop = tf.nn.dropout(dense2_out, keep_probs[1])
     with tf.variable_scope("dense3") as scope:
         dense3_out = dense_layer(dense2_drop, hidden_layer_activation_fn, [512, 256])
-        dense3_drop = tf.nn.dropout(dense3_out, keep_prob)
+        dense3_drop = tf.nn.dropout(dense3_out, keep_probs[2])
     with tf.variable_scope("dense4") as scope:
         logits = dense_layer(dense3_drop, identity_activation, [256, num_labels])
 
@@ -104,7 +104,7 @@ def training(loss):
     # global_step = tf.Variable(0, name='global_step', trainable=False)
     # Optimizer.
     # optimizer = tf.train.GradientDescentOptimizer(0.5)
-    optimizer = tf.train.AdagradOptimizer(0.05)
+    optimizer = tf.train.AdamOptimizer(1e-4)
     train_op = optimizer.minimize(loss)
     return train_op
 
@@ -116,13 +116,15 @@ def evaluation(logits, labels):
     return tf.reduce_sum(tf.cast(correct, tf.int32))
 
 
-def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_prob_placeholder, images, labels):
+def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_prob_placeholders, images, labels):
     correct_count = 0
     for img_batch, label_batch in zip(get_batches(images), get_batches(labels)):
         feed_dict = {
             images_placeholder: img_batch,
             labels_placeholder: label_batch,
-            keep_prob_placeholder: 1.0
+            keep_prob_placeholders[0]: 1.0,
+            keep_prob_placeholders[1]: 1.0,
+            keep_prob_placeholders[2]: 1.0,
         }
         correct_count += sess.run(eval_correct, feed_dict=feed_dict)
     count = images.shape[0]
@@ -137,9 +139,12 @@ with graph.as_default():
     # at run time with a training minibatch.
     x = tf.placeholder(tf.float32, shape=(batch_size, image_size * image_size))
     y_ = tf.placeholder(tf.int32, shape=(batch_size, num_labels))
-    keep_prob = tf.placeholder(tf.float32)
+    keep1_prob = tf.placeholder(tf.float32)
+    keep2_prob = tf.placeholder(tf.float32)
+    keep3_prob = tf.placeholder(tf.float32)
+    keep_probs = [keep1_prob, keep2_prob, keep3_prob]
 
-    logits_op = inference(x, keep_prob)
+    logits_op = inference(x, keep_probs)
 
     loss_op = loss(logits_op, y_)
 
@@ -150,11 +155,11 @@ with graph.as_default():
     saver = tf.train.Saver(tf.all_variables())
 
 
-num_steps = 30001
+num_steps = 300001
 
 with tf.Session(graph=graph) as session:
     tf.initialize_all_variables().run()
-    wait_for_improvement = 10
+    wait_for_improvement = 20
     steps_without_improvement = 0
     print("Initialized")
     best_accuracy = -float("inf")
@@ -172,12 +177,12 @@ with tf.Session(graph=graph) as session:
         # Prepare a dictionary telling the session where to feed the minibatch.
         # The key of the dictionary is the placeholder node of the graph to be fed,
         # and the value is the numpy array to feed to it.
-        feed_dict = {x : batch_data, y_ : batch_labels, keep_prob: 0.5}
+        feed_dict = {x : batch_data, y_ : batch_labels, keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
         if step % 500 == 0:
-            validation_accuracy = do_eval(session, evaluate_op, x, y_, keep_prob, valid_dataset, valid_labels)
+            validation_accuracy = do_eval(session, evaluate_op, x, y_, keep_probs, valid_dataset, valid_labels)
             print("Minibatch loss at step %d: %f in %.2fs" % (step, l, time.time() - starttime))
-            print("Minibatch accuracy: %.1f%%" % do_eval(session, evaluate_op, x, y_, keep_prob, batch_data, batch_labels))
+            print("Minibatch accuracy: %.1f%%" % do_eval(session, evaluate_op, x, y_, keep_probs, batch_data, batch_labels))
             if validation_accuracy > best_accuracy:
                 best_accuracy = validation_accuracy
                 steps_without_improvement = 0
@@ -190,6 +195,6 @@ with tf.Session(graph=graph) as session:
                 print("Validation accuracy not improved for %i evaluations. Stopping early!" % wait_for_improvement)
                 break
     saver.restore(session, savepath)
-    print("\nTest accuracy: %.1f%%" % do_eval(session, evaluate_op, x, y_, keep_prob, test_dataset, test_labels))
+    print("\nTest accuracy: %.1f%%" % do_eval(session, evaluate_op, x, y_, keep_probs, test_dataset, test_labels))
     print("Total time %.2fs" % (time.time() - starttime))
 
