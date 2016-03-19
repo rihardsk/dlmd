@@ -72,8 +72,15 @@ def get_batches(data):
 def dense_layer(x, activation, size):
     weights = tf.Variable(
             tf.truncated_normal(size, name="weights", stddev=0.1))
+    tf.histogram_summary(weights.op.name, weights)
+
     biases = tf.Variable(tf.zeros([size[-1]]), name="biases")
+    tf.histogram_summary(biases.op.name, biases)
+
     dense_out = activation(tf.matmul(x, weights) + biases)
+    tf.histogram_summary(dense_out.op.name + "/activation", dense_out)
+    tf.scalar_summary(dense_out.op.name + "/sparsity", tf.nn.zero_fraction(dense_out))
+
     return dense_out
 
 
@@ -100,11 +107,22 @@ def loss(logits, labels):
     return loss
 
 
+def add_loss_summary(loss):
+    avg = tf.train.ExponentialMovingAverage(0.9)
+    loss_avg_op = avg.apply([loss])
+    tf.scalar_summary(loss.op.name + " (raw)", loss)
+    tf.scalar_summary(loss.op.name + " (running avg)", avg.average(loss))
+    return loss_avg_op
+
+
 def training(loss):
-    # global_step = tf.Variable(0, name='global_step', trainable=False)
+    global_step = tf.Variable(0, name='global_step', trainable=False)
     # Optimizer.
     # optimizer = tf.train.GradientDescentOptimizer(0.5)
-    optimizer = tf.train.AdamOptimizer(1e-4)
+    # optimizer = tf.train.AdamOptimizer(1e-4, global_step=global_step)
+    loss_averages_op = add_loss_summary(loss_op)
+    with tf.control_dependencies([loss_averages_op]):
+        optimizer = tf.train.AdamOptimizer(1e-4)
     train_op = optimizer.minimize(loss)
     return train_op
 
@@ -137,11 +155,11 @@ with graph.as_default():
 
     # Input data. For the training data, we use a placeholder that will be fed
     # at run time with a training minibatch.
-    x = tf.placeholder(tf.float32, shape=(batch_size, image_size * image_size))
-    y_ = tf.placeholder(tf.int32, shape=(batch_size, num_labels))
-    keep1_prob = tf.placeholder(tf.float32)
-    keep2_prob = tf.placeholder(tf.float32)
-    keep3_prob = tf.placeholder(tf.float32)
+    x = tf.placeholder(tf.float32, shape=(batch_size, image_size * image_size), name="inputs")
+    y_ = tf.placeholder(tf.int32, shape=(batch_size, num_labels), name="labels")
+    keep1_prob = tf.placeholder(tf.float32, name="keep_prob_1")
+    keep2_prob = tf.placeholder(tf.float32, name="keep_prob_2")
+    keep3_prob = tf.placeholder(tf.float32, name="keep_prob_3")
     keep_probs = [keep1_prob, keep2_prob, keep3_prob]
 
     logits_op = inference(x, keep_probs)
@@ -151,6 +169,8 @@ with graph.as_default():
     train_op = training(loss_op)
 
     evaluate_op = evaluation(logits_op, y_)
+
+    summary_op = tf.merge_all_summaries()
 
     saver = tf.train.Saver(tf.all_variables())
 
@@ -168,6 +188,7 @@ with tf.Session(graph=graph) as session:
     savepath = os.path.join(savedir, "best.ckpt")
     if not os.path.isdir(savedir):
         os.makedirs(savedir)
+    summary_writer = tf.train.SummaryWriter(savedir, graph_def=session.graph_def)
 
     starttime = time.time()
     for step in range(num_steps):
@@ -179,6 +200,9 @@ with tf.Session(graph=graph) as session:
         # and the value is the numpy array to feed to it.
         feed_dict = {x : batch_data, y_ : batch_labels, keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
+        if step % 100 == 0:
+            summary_str = session.run(summary_op, feed_dict=feed_dict)
+            summary_writer.add_summary(summary_str, step)
         if step % 500 == 0:
             validation_accuracy = do_eval(session, evaluate_op, x, y_, keep_probs, valid_dataset, valid_labels)
             print("Minibatch loss at step %d: %f in %.2fs" % (step, l, time.time() - starttime))
