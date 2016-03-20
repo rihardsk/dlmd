@@ -7,6 +7,7 @@ from six.moves import cPickle as pickle
 from six.moves import range
 import time
 import os
+import datetime
 
 pickle_file = 'notMNIST.pickle'
 
@@ -69,9 +70,10 @@ def get_batches(data):
         yield get_batch(data, i)
 
 
-def dense_layer(x, activation, size):
+def dense_layer(x, activation, size, wd_rate=0.004):
     weights = tf.Variable(
             tf.truncated_normal(size, name="weights", stddev=0.1))
+    weight_decay(weights, rate=wd_rate)
     tf.histogram_summary(weights.op.name, weights)
 
     biases = tf.Variable(tf.zeros([size[-1]]), name="biases")
@@ -87,31 +89,40 @@ def dense_layer(x, activation, size):
 def inference(x, keep_probs):
     # Hidden Layers.
     with tf.variable_scope("dense1") as scope:
-        dense1_out = dense_layer(x, hidden_layer_activation_fn, [image_size * image_size, 1024])
+        dense1_out = dense_layer(x, hidden_layer_activation_fn, [image_size * image_size, 1024], wd_rate=0)
         dense1_drop = tf.nn.dropout(dense1_out, keep_probs[0])
     with tf.variable_scope("dense2") as scope:
-        dense2_out = dense_layer(dense1_drop, hidden_layer_activation_fn, [1024, 512])
+        dense2_out = dense_layer(dense1_drop, hidden_layer_activation_fn, [1024, 512], wd_rate=0)
         dense2_drop = tf.nn.dropout(dense2_out, keep_probs[1])
     with tf.variable_scope("dense3") as scope:
-        dense3_out = dense_layer(dense2_drop, hidden_layer_activation_fn, [512, 256])
+        dense3_out = dense_layer(dense2_drop, hidden_layer_activation_fn, [512, 256], wd_rate=0)
         dense3_drop = tf.nn.dropout(dense3_out, keep_probs[2])
     with tf.variable_scope("dense4") as scope:
-        logits = dense_layer(dense3_drop, identity_activation, [256, num_labels])
+        logits = dense_layer(dense3_drop, identity_activation, [256, num_labels], wd_rate=0)
 
     return logits
 
 
+def weight_decay(variable, rate):
+    wd_op = tf.mul(tf.nn.l2_loss(variable), rate, name='weight_decay')
+    tf.add_to_collection('losses', wd_op)
+    return wd_op
+
+
 def loss(logits, labels):
     cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, tf.cast(labels, tf.float32))
-    loss = tf.reduce_mean(cross_entropy)
-    return loss
+    cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy_mean')
+    tf.add_to_collection('losses', cross_entropy_mean)
+    return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def add_loss_summary(loss):
-    avg_op = tf.train.ExponentialMovingAverage(0.9)
-    loss_avg_op = avg_op.apply([loss])
-    tf.scalar_summary("loss/" + loss.op.name + " (raw)", loss)
-    tf.scalar_summary("loss/" + loss.op.name + " (running avg)", avg.average(loss))
+def add_loss_summary(total_loss):
+    avg_op = tf.train.ExponentialMovingAverage(0.99)
+    losses = tf.get_collection('losses')
+    loss_avg_op = avg_op.apply(losses + [total_loss])
+    for l in losses + [total_loss]:
+        tf.scalar_summary(l.op.name + "/raw", l)
+        tf.scalar_summary(l.op.name + "/running_avg", avg_op.average(l))
     return loss_avg_op
 
 
@@ -123,7 +134,7 @@ def training(loss):
     loss_averages_op = add_loss_summary(loss_op)
     with tf.control_dependencies([loss_averages_op]):
         optimizer = tf.train.AdamOptimizer(1e-4)
-    train_op = optimizer.minimize(loss)
+        train_op = optimizer.minimize(loss)
     return train_op
 
 
@@ -190,13 +201,14 @@ with tf.Session(graph=graph) as session:
     print("Initialized")
     best_accuracy = -float("inf")
 
-    savedir = "saved_models"
+    savedir = os.path.join("saved_models", str(datetime.datetime.now()))
     savepath = os.path.join(savedir, "best.ckpt")
     if not os.path.isdir(savedir):
         os.makedirs(savedir)
     summary_writer = tf.train.SummaryWriter(savedir, graph_def=session.graph_def)
 
     starttime = time.time()
+
     for step in range(num_steps):
         # Generate a minibatch.
         batch_data = get_batch(train_dataset, step)
@@ -205,6 +217,7 @@ with tf.Session(graph=graph) as session:
         # The key of the dictionary is the placeholder node of the graph to be fed,
         # and the value is the numpy array to feed to it.
         feed_dict = {x : batch_data, y_ : batch_labels, keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
+        # feed_dict = {x : batch_data, y_ : batch_labels, keep1_prob: 1, keep2_prob: 1, keep3_prob: 1}
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
         if step % 100 == 0:
             summary_str = session.run(summary_op, feed_dict=feed_dict)
