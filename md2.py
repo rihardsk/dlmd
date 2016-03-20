@@ -108,10 +108,10 @@ def loss(logits, labels):
 
 
 def add_loss_summary(loss):
-    avg = tf.train.ExponentialMovingAverage(0.9)
-    loss_avg_op = avg.apply([loss])
-    tf.scalar_summary(loss.op.name + " (raw)", loss)
-    tf.scalar_summary(loss.op.name + " (running avg)", avg.average(loss))
+    avg_op = tf.train.ExponentialMovingAverage(0.9)
+    loss_avg_op = avg_op.apply([loss])
+    tf.scalar_summary("loss/" + loss.op.name + " (raw)", loss)
+    tf.scalar_summary("loss/" + loss.op.name + " (running avg)", avg.average(loss))
     return loss_avg_op
 
 
@@ -172,6 +172,12 @@ with graph.as_default():
 
     summary_op = tf.merge_all_summaries()
 
+    valid_accuracy_ph = tf.placeholder(tf.float32, name="validation_accuracy_ph")
+    batch_accuracy_ph = tf.placeholder(tf.float32, name="batch_accuracy_ph")
+    validation_summary_op = tf.scalar_summary("accuracy/validation", valid_accuracy_ph)
+    batch_summary_op = tf.scalar_summary("accuracy/current_minibatch", batch_accuracy_ph)
+    accuracy_summary_op = tf.merge_summary([validation_summary_op, batch_summary_op])
+
     saver = tf.train.Saver(tf.all_variables())
 
 
@@ -205,8 +211,13 @@ with tf.Session(graph=graph) as session:
             summary_writer.add_summary(summary_str, step)
         if step % 500 == 0:
             validation_accuracy = do_eval(session, evaluate_op, x, y_, keep_probs, valid_dataset, valid_labels)
+            batch_accuracy = do_eval(session, evaluate_op, x, y_, keep_probs, batch_data, batch_labels)
+            summary_str = session.run(accuracy_summary_op, feed_dict={valid_accuracy_ph: validation_accuracy,
+                                                                      batch_accuracy_ph: batch_accuracy})
+            summary_writer.add_summary(summary_str, step)
+
             print("Minibatch loss at step %d: %f in %.2fs" % (step, l, time.time() - starttime))
-            print("Minibatch accuracy: %.1f%%" % do_eval(session, evaluate_op, x, y_, keep_probs, batch_data, batch_labels))
+            print("Minibatch accuracy: %.1f%%" % batch_accuracy)
             if validation_accuracy > best_accuracy:
                 best_accuracy = validation_accuracy
                 steps_without_improvement = 0
