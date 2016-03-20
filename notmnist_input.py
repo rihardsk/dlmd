@@ -22,15 +22,16 @@ print(np.bincount(valid_labels), np.bincount(valid_labels).std())
 
 image_size = 28
 num_labels = 10
+num_channels = 1
 
 # def whiten(images):
 #     pass
 
 def reformat(dataset, labels):
-    reshaped_dataset = dataset.reshape((-1, image_size * image_size)).astype(np.float32)
+    reshaped_dataset = dataset.reshape((-1, image_size, image_size, num_channels)).astype(np.float32)
     # reshaped_dataset = dataset.astype(np.float32)
     # Map 0 to [1.0, 0.0, 0.0 ...], 1 to [0.0, 1.0, 0.0 ...]
-    one_hot_labels = (np.arange(num_labels) == labels[:,None]).astype(np.float32)
+    one_hot_labels = (np.arange(num_labels) == labels[:, None]).astype(np.float32)
     return reshaped_dataset, one_hot_labels
 
 train_dataset, train_labels = reformat(train_dataset, train_labels)

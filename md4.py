@@ -3,12 +3,13 @@
 from __future__ import print_function
 import numpy as np
 import tensorflow as tf
+from six.moves import cPickle as pickle
 from six.moves import range
 import time
 import os
 import datetime
-from notmnist_dense import inference, training, evaluation, do_eval, loss
-from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, batch_size, image_size
+from notmnist_conv import inference, training, evaluation, do_eval, loss
+from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, batch_size
 
 
 graph = tf.Graph()
@@ -27,12 +28,12 @@ with graph.as_default():
     # image = tf.image.per_image_whitening(image)
     # image = tf.reshape(image, (image_size * image_size,))
     image_batch, label_batch = tf.train.batch([image, label], batch_size, num_threads=1)
-    image_batch = tf.reshape(image_batch, (-1, image_size * image_size))
 
     keep1_prob = tf.placeholder(tf.float32, name="keep_prob_1")
-    keep2_prob = tf.placeholder(tf.float32, name="keep_prob_2")
-    keep3_prob = tf.placeholder(tf.float32, name="keep_prob_3")
-    keep_probs = [keep1_prob, keep2_prob, keep3_prob]
+    # keep2_prob = tf.placeholder(tf.float32, name="keep_prob_2")
+    # keep3_prob = tf.placeholder(tf.float32, name="keep_prob_3")
+    # keep_probs = [keep1_prob, keep2_prob, keep3_prob]
+    keep_probs = [keep1_prob]
 
     logits_op = inference(image_batch, keep_probs)
 
@@ -85,7 +86,7 @@ with tf.Session(graph=graph) as session:
         # The key of the dictionary is the placeholder node of the graph to be fed,
         # and the value is the numpy array to feed to it.
         # feed_dict = {images_initializer: batch_data, labels_initializer: batch_labels, keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
-        feed_dict = {keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
+        feed_dict = {keep1_prob: 0.5}
         # feed_dict = {input_images : batch_data, input_labels : batch_labels, keep1_prob: 1, keep2_prob: 1, keep3_prob: 1}
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
         if step % 100 == 0:
