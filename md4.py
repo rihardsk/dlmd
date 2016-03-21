@@ -9,7 +9,7 @@ import time
 import os
 import datetime
 from notmnist_conv import inference, training, evaluation, do_eval, loss, batch_size
-from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels
+from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, train_batches
 
 
 graph = tf.Graph()
@@ -58,12 +58,12 @@ num_steps = 300001
 
 with tf.Session(graph=graph) as session:
     tf.initialize_all_variables().run()
-    session.run(input_images.initializer, feed_dict={images_initializer: train_dataset})
-    session.run(input_labels.initializer, feed_dict={labels_initializer: train_labels})
+    # session.run(input_images.initializer, feed_dict={images_initializer: train_dataset})
+    # session.run(input_labels.initializer, feed_dict={labels_initializer: train_labels})
 
     # Start input enqueue threads.
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=session, coord=coord)
+    # coord = tf.train.Coordinator()
+    # threads = tf.train.start_queue_runners(sess=session, coord=coord)
 
     wait_for_improvement = 20
     steps_without_improvement = 0
@@ -86,7 +86,9 @@ with tf.Session(graph=graph) as session:
         # The key of the dictionary is the placeholder node of the graph to be fed,
         # and the value is the numpy array to feed to it.
         # feed_dict = {images_initializer: batch_data, labels_initializer: batch_labels, keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
-        feed_dict = {keep1_prob: 0.5}
+        # feed_dict = {keep1_prob: 0.5}
+        images, labels = train_batches.next_batch(batch_size)
+        feed_dict = {keep1_prob: 0.5, image_batch: images, label_batch: labels}
         # feed_dict = {input_images : batch_data, input_labels : batch_labels, keep1_prob: 1, keep2_prob: 1, keep3_prob: 1}
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
         if step % 100 == 0:
@@ -120,7 +122,7 @@ with tf.Session(graph=graph) as session:
     print("\nTest accuracy: %.1f%%" % do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, test_dataset, test_labels))
     print("Total time %.2fs" % (time.time() - starttime))
 
-    coord.request_stop()
+    # coord.request_stop()
     # Wait for threads to finish.
-    coord.join(threads)
+    # coord.join(threads)
     session.close()

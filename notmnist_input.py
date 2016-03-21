@@ -1,6 +1,30 @@
 from six.moves import cPickle as pickle
 import numpy as np
 
+
+class Batcher(object):
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = labels
+        self.current_index = 0
+        self.count = data.shape[0]
+        assert data.shape[0] == labels.shape[0]
+
+    def next_batch(self, batch_size):
+        assert batch_size <= self.count
+        start = self.current_index
+        self.current_index += batch_size
+        if self.current_index >= self.count:
+            perm = np.arange(self.count)
+            np.random.shuffle(perm)
+            self.data = self.data[perm]
+            self.labels = self.labels[perm]
+            start = 0
+            self.current_index = batch_size
+        return self.data[start:self.current_index, :], self.labels[start:self.current_index, :]
+
+
+
 pickle_file = 'notMNIST.pickle'
 
 with open(pickle_file, 'rb') as f:
@@ -41,3 +65,7 @@ test_dataset, test_labels = reformat(test_dataset, test_labels)
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
+
+train_batches = Batcher(train_dataset, train_labels)
+valid_batches = Batcher(valid_dataset, valid_labels)
+test_batches = Batcher(test_dataset, test_labels)
