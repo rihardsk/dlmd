@@ -26,21 +26,49 @@ def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
 
 
+def weight_variable(shape):
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
+
+
+def bias_variable(shape):
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
+
+
+def conv2d(x, W):
+    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+
+
 def inference(x, keep_probs):
-    # Hidden Layers.
-    out = x
-    with tf.variable_scope("conv1") as scope:
-        conv_out = conv_layer(out, hidden_layer_activation_fn, [patch_size, patch_size, num_channels, depth1], strides, wd_rate=0)
-        out = max_pool_2x2(conv_out)
-    with tf.variable_scope("conv2") as scope:
-        conv_out = conv_layer(out, hidden_layer_activation_fn, [patch_size, patch_size, depth1, depth2], strides, wd_rate=0)
-        out = max_pool_2x2(conv_out)
-    with tf.variable_scope("dense1") as scope:
-        flat = tf.reshape(out, [-1, 7 * 7 * depth2])
-        dense_out = dense_layer(flat, hidden_layer_activation_fn, [7 * 7 * depth2, num_hidden], wd_rate=0)  # image_size // 4 == 7 (is this true?)
-        out = tf.nn.dropout(dense_out, keep_probs[0])
-    with tf.variable_scope("dense2") as scope:
-        logits = dense_layer(out, identity_activation, [num_hidden, num_labels], wd_rate=0)
+    filter_width = 5
+    filter_height = 5
+    n_hidden_units = 1024
+
+    n_features1 = 32  # n_output_channels1
+    W_conv1 = weight_variable([filter_width, filter_height, num_channels, n_features1])
+    b_conv1 = bias_variable([n_features1])
+    x_image = tf.reshape(x, [-1, image_size, image_size, num_channels])
+    h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+    h_pool1 = max_pool_2x2(h_conv1)
+
+    n_features2 = 64
+    W_conv2 = weight_variable([filter_width, filter_height, n_features1, n_features2])
+    b_conv2 = bias_variable([n_features2])
+    h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+    h_pool2 = max_pool_2x2(h_conv2)
+
+    W_dense1 = weight_variable([7 * 7 * n_features2, n_hidden_units])  # 7 comes from applying max pooling of size 2 twice to the input image of size 28
+    b_dense1 = bias_variable([n_hidden_units])
+    h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * n_features2])
+    h_dense1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_dense1) + b_dense1)
+
+    keep_prob = keep_probs[0]
+    h_dense1_drop = tf.nn.dropout(h_dense1, keep_prob)
+
+    W_dense2 = weight_variable([n_hidden_units, num_labels])
+    b_dense2 = bias_variable([num_labels])
+    logits = tf.nn.softmax(tf.matmul(h_dense1_drop, W_dense2) + b_dense2)
 
     return logits
 
