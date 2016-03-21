@@ -48,7 +48,7 @@ def inference(x, keep_probs):
 
 def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_prob_placeholders, images, labels):
     correct_count = 0
-    for img_batch, label_batch in zip(get_batches(images), get_batches(labels)):
+    for img_batch, label_batch in zip(get_batches(images, batch_size), get_batches(labels, batch_size)):
         feed_dict = {
             images_placeholder: img_batch,
             labels_placeholder: label_batch,

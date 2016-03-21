@@ -10,7 +10,7 @@ hidden_layer_activation_fn = tf.nn.elu # achieved 89.2% test
 identity_activation = lambda x: x
 
 
-def get_batch(data, batch_num):
+def get_batch(data, batch_num, batch_size=batch_size):
     count = data.shape[0]
     num_batches = count // batch_size
     offset = (batch_num * batch_size) % count
@@ -19,11 +19,11 @@ def get_batch(data, batch_num):
     return ret
 
 
-def get_batches(data):
+def get_batches(data, batch_size=batch_size):
     count = data.shape[0]
     num_batches = count // batch_size
     for i in xrange(num_batches):
-        yield get_batch(data, i)
+        yield get_batch(data, i, batch_size)
 
 
 def dense_layer(x, activation, size, wd_rate=0.004):

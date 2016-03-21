@@ -7,20 +7,13 @@ import time
 import os
 import datetime
 from notmnist_conv import inference, training, evaluation, do_eval, loss, batch_size
-from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, train_batches
+from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, train_batches, image_size, num_labels, num_channels
 
 
 graph = tf.Graph()
 with graph.as_default():
-
-    images_initializer = tf.placeholder(tf.float32, shape=train_dataset.shape, name="inputs")
-    labels_initializer = tf.placeholder(tf.int32, shape=train_labels.shape, name="labels")
-
-    input_images = tf.Variable(images_initializer, trainable=False, collections=[])
-    input_labels = tf.Variable(labels_initializer, trainable=False, collections=[])
-
-    image, label = tf.train.slice_input_producer([input_images, input_labels])
-    image_batch, label_batch = tf.train.batch([image, label], batch_size, num_threads=4)
+    image_batch = tf.placeholder(tf.float32, shape=[batch_size, image_size, image_size, num_channels])
+    label_batch = tf.placeholder(tf.float32, shape=[batch_size, num_labels])
 
     keep1_prob = tf.placeholder(tf.float32, name="keep_prob_1")
     keep_probs = [keep1_prob]
