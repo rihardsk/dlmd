@@ -1,6 +1,7 @@
 import tensorflow as tf
 from notmnist_dense import dense_layer, hidden_layer_activation_fn, identity_activation, training, evaluation, weight_decay, get_batches
 from notmnist_input import image_size, num_labels, num_channels
+import time
 
 patch_size = 5
 depth1 = 32
@@ -80,6 +81,7 @@ def loss(logits, labels):
 
 
 def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_prob_placeholders, images, labels):
+    print("Started eval at {}".format(time.time()))
     correct_count = 0
     for img_batch, label_batch in zip(get_batches(images, batch_size), get_batches(labels, batch_size)):
         feed_dict = {
@@ -90,4 +92,5 @@ def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_pro
         correct_count += sess.run(eval_correct, feed_dict=feed_dict)
     count = images.shape[0]
     accuracy = 100.0 * correct_count / count
+    print("Ended eval at {}".format(time.time()))
     return accuracy

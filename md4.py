@@ -52,8 +52,9 @@ with tf.Session(graph=graph) as session:
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
         if step % 100 == 0:
             validation_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, valid_dataset, valid_labels)
-            train_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, train_dataset, train_labels)
-
+            # train_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, train_dataset, train_labels)
+            train_accuracy = 0
+            
             stepend = time.time()
             print("Minibatch loss at step %d: %f in %.2fs" % (step, l, stepend - stepstart))
             print("Minibatch accuracy: %.1f%%" % train_accuracy)
