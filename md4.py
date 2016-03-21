@@ -77,7 +77,7 @@ with tf.Session(graph=graph) as session:
     summary_writer = tf.train.SummaryWriter(savedir, graph_def=session.graph_def)
 
     starttime = time.time()
-
+    stepstart = starttime
     for step in range(num_steps):
         # Generate a minibatch.
         # batch_data = get_batch(train_dataset, step)
@@ -100,7 +100,8 @@ with tf.Session(graph=graph) as session:
                                                                       batch_accuracy_ph: train_accuracy})
             summary_writer.add_summary(summary_str, step)
 
-            print("Minibatch loss at step %d: %f in %.2fs" % (step, l, time.time() - starttime))
+            stepend = time.time()
+            print("Minibatch loss at step %d: %f in %.2fs" % (step, l, stepend - stepstart))
             print("Minibatch accuracy: %.1f%%" % train_accuracy)
             if validation_accuracy > best_accuracy:
                 best_accuracy = validation_accuracy
@@ -113,6 +114,7 @@ with tf.Session(graph=graph) as session:
             if steps_without_improvement > wait_for_improvement:
                 print("Validation accuracy not improved for %i evaluations. Stopping early!" % wait_for_improvement)
                 break
+            stepstart = stepend
 
     saver.restore(session, savepath)
     print("\nTest accuracy: %.1f%%" % do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, test_dataset, test_labels))
