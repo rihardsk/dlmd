@@ -1,5 +1,5 @@
 import tensorflow as tf
-from notmnist_dense import dense_layer, hidden_layer_activation_fn, identity_activation, training, evaluation, loss, weight_decay, get_batches
+from notmnist_dense import dense_layer, hidden_layer_activation_fn, identity_activation, training, evaluation, weight_decay, get_batches
 from notmnist_input import image_size, num_labels, num_channels
 
 patch_size = 5
@@ -13,7 +13,6 @@ batch_size = 32
 def conv_layer(x, activation, shape, strides, wd_rate=0.004):
     weights = tf.Variable(
             tf.truncated_normal(shape, name="weights", stddev=0.1))
-    weight_decay(weights, rate=wd_rate)
 
     biases = tf.Variable(tf.zeros([shape[-1]]), name="biases")
 
@@ -44,6 +43,12 @@ def inference(x, keep_probs):
         logits = dense_layer(out, identity_activation, [num_hidden, num_labels], wd_rate=0)
 
     return logits
+
+
+def loss(logits, labels):
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits, tf.cast(labels, tf.float32))
+    cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy_mean')
+    return cross_entropy_mean
 
 
 def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_prob_placeholders, images, labels):
