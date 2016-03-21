@@ -1,6 +1,9 @@
 import tensorflow as tf
 import numpy as np
-from notmnist_input import batch_size, image_size, num_labels
+from notmnist_input import image_size, num_labels
+
+
+batch_size = 128
 
 # hidden_layer_activation_fn = tf.nn.relu # achieved 84% test accuracy
 hidden_layer_activation_fn = tf.nn.elu # achieved 89.2% test

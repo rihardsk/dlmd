@@ -7,6 +7,7 @@ depth1 = 32
 depth2 = 64
 num_hidden = 1024
 strides = [1, 1, 1, 1]
+batch_size = 32
 
 
 def conv_layer(x, activation, shape, strides, wd_rate=0.004):

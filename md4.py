@@ -8,8 +8,8 @@ from six.moves import range
 import time
 import os
 import datetime
-from notmnist_conv import inference, training, evaluation, do_eval, loss
-from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, batch_size
+from notmnist_conv import inference, training, evaluation, do_eval, loss, batch_size
+from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels
 
 
 graph = tf.Graph()
@@ -27,7 +27,7 @@ with graph.as_default():
     # image = tf.reshape(image, (image_size, image_size, 1))
     # image = tf.image.per_image_whitening(image)
     # image = tf.reshape(image, (image_size * image_size,))
-    image_batch, label_batch = tf.train.batch([image, label], batch_size, num_threads=1)
+    image_batch, label_batch = tf.train.batch([image, label], batch_size, num_threads=4)
 
     keep1_prob = tf.placeholder(tf.float32, name="keep_prob_1")
     # keep2_prob = tf.placeholder(tf.float32, name="keep_prob_2")

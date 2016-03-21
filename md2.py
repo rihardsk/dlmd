@@ -7,8 +7,8 @@ from six.moves import range
 import time
 import os
 import datetime
-from notmnist_dense import inference, training, evaluation, do_eval, loss
-from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, batch_size, image_size
+from notmnist_dense import inference, training, evaluation, do_eval, loss, batch_size
+from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels, image_size
 
 
 graph = tf.Graph()

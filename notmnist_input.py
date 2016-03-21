@@ -41,5 +41,3 @@ test_dataset, test_labels = reformat(test_dataset, test_labels)
 print('Training set', train_dataset.shape, train_labels.shape)
 print('Validation set', valid_dataset.shape, valid_labels.shape)
 print('Test set', test_dataset.shape, test_labels.shape)
-
-batch_size = 128
