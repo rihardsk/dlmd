@@ -92,7 +92,7 @@ with tf.Session(graph=graph) as session:
         if step % 100 == 0:
             summary_str = session.run(summary_op, feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, step)
-        if step % 500 == 0:
+        if step % 100 == 0:
             validation_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, valid_dataset, valid_labels)
             train_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, train_dataset, train_labels)
 
