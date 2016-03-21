@@ -14,15 +14,11 @@ def conv_layer(x, activation, shape, strides, wd_rate=0.004):
     weights = tf.Variable(
             tf.truncated_normal(shape, name="weights", stddev=0.1))
     weight_decay(weights, rate=wd_rate)
-    tf.histogram_summary(weights.op.name, weights)
 
     biases = tf.Variable(tf.zeros([shape[-1]]), name="biases")
-    tf.histogram_summary(biases.op.name, biases)
 
     conv = tf.nn.conv2d(x, weights, strides, padding='SAME')
     conv_out = activation(conv + biases)
-    tf.histogram_summary(conv_out.op.name + "/activation", conv_out)
-    tf.scalar_summary(conv_out.op.name + "/sparsity", tf.nn.zero_fraction(conv_out))
 
     return conv_out
 

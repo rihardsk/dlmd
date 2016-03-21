@@ -30,14 +30,8 @@ def dense_layer(x, activation, size, wd_rate=0.004):
     weights = tf.Variable(
             tf.truncated_normal(size, name="weights", stddev=0.1))
     weight_decay(weights, rate=wd_rate)
-    tf.histogram_summary(weights.op.name, weights)
-
     biases = tf.Variable(tf.zeros([size[-1]]), name="biases")
-    tf.histogram_summary(biases.op.name, biases)
-
     dense_out = activation(tf.matmul(x, weights) + biases)
-    tf.histogram_summary(dense_out.op.name + "/activation", dense_out)
-    tf.scalar_summary(dense_out.op.name + "/sparsity", tf.nn.zero_fraction(dense_out))
 
     return dense_out
 
@@ -72,24 +66,12 @@ def loss(logits, labels):
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
 
-def add_loss_summary(total_loss):
-    avg_op = tf.train.ExponentialMovingAverage(0.99)
-    losses = tf.get_collection('losses')
-    loss_avg_op = avg_op.apply(losses + [total_loss])
-    for l in losses + [total_loss]:
-        tf.scalar_summary(l.op.name + "/raw", l)
-        tf.scalar_summary(l.op.name + "/running_avg", avg_op.average(l))
-    return loss_avg_op
-
-
 def training(loss):
     # Optimizer.
     # optimizer = tf.train.GradientDescentOptimizer(0.5)
     # optimizer = tf.train.AdamOptimizer(1e-4, global_step=global_step)
-    loss_averages_op = add_loss_summary(loss)
-    with tf.control_dependencies([loss_averages_op]):
-        optimizer = tf.train.AdamOptimizer(1e-4)
-        train_op = optimizer.minimize(loss)
+    optimizer = tf.train.AdamOptimizer(1e-4)
+    train_op = optimizer.minimize(loss)
     return train_op
 
 

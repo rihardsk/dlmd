@@ -33,14 +33,6 @@ with graph.as_default():
 
     evaluate_op = evaluation(logits_op, label_batch)
 
-    summary_op = tf.merge_all_summaries()
-
-    valid_accuracy_ph = tf.placeholder(tf.float32, name="validation_accuracy_ph")
-    batch_accuracy_ph = tf.placeholder(tf.float32, name="batch_accuracy_ph")
-    validation_summary_op = tf.scalar_summary("accuracy/validation", valid_accuracy_ph)
-    batch_summary_op = tf.scalar_summary("accuracy/training", batch_accuracy_ph)
-    accuracy_summary_op = tf.merge_summary([validation_summary_op, batch_summary_op])
-
     saver = tf.train.Saver(tf.all_variables())
 
 
@@ -58,7 +50,6 @@ with tf.Session(graph=graph) as session:
     savepath = os.path.join(savedir, "best.ckpt")
     if not os.path.isdir(savedir):
         os.makedirs(savedir)
-    summary_writer = tf.train.SummaryWriter(savedir, graph_def=session.graph_def)
 
     starttime = time.time()
     stepstart = starttime
