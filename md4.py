@@ -91,16 +91,16 @@ with tf.Session(graph=graph) as session:
         feed_dict = {keep1_prob: 0.5, image_batch: images, label_batch: labels}
         # feed_dict = {input_images : batch_data, input_labels : batch_labels, keep1_prob: 1, keep2_prob: 1, keep3_prob: 1}
         _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
-        if step % 100 == 0:
-            summary_str = session.run(summary_op, feed_dict=feed_dict)
-            summary_writer.add_summary(summary_str, step)
+        # if step % 100 == 0:
+            # summary_str = session.run(summary_op, feed_dict=feed_dict)
+            # summary_writer.add_summary(summary_str, step)
         if step % 100 == 0:
             validation_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, valid_dataset, valid_labels)
             train_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, train_dataset, train_labels)
 
-            summary_str = session.run(accuracy_summary_op, feed_dict={valid_accuracy_ph: validation_accuracy,
-                                                                      batch_accuracy_ph: train_accuracy})
-            summary_writer.add_summary(summary_str, step)
+            # summary_str = session.run(accuracy_summary_op, feed_dict={valid_accuracy_ph: validation_accuracy,
+            #                                                           batch_accuracy_ph: train_accuracy})
+            # summary_writer.add_summary(summary_str, step)
 
             stepend = time.time()
             print("Minibatch loss at step %d: %f in %.2fs" % (step, l, stepend - stepstart))
