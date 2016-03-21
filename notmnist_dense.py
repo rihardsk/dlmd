@@ -16,7 +16,6 @@ def get_batch(data, batch_num):
     offset = (batch_num * batch_size) % count
     indices = range(offset, offset + batch_size)
     ret = np.take(data, indices, axis=0, mode="wrap")
-    # print(ret)
     return ret
 
 
@@ -84,7 +83,6 @@ def add_loss_summary(total_loss):
 
 
 def training(loss):
-    global_step = tf.Variable(0, name='global_step', trainable=False)
     # Optimizer.
     # optimizer = tf.train.GradientDescentOptimizer(0.5)
     # optimizer = tf.train.AdamOptimizer(1e-4, global_step=global_step)
