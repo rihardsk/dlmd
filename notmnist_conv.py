@@ -1,5 +1,5 @@
 import tensorflow as tf
-from notmnist_dense import dense_layer, hidden_layer_activation_fn, identity_activation, training, evaluation, loss, weight_decay, get_batches
+from notmnist_dense import dense_layer, hidden_layer_activation_fn, identity_activation, training, evaluation, loss, weight_decay, get_batches, accuracy
 from notmnist_input import image_size, num_labels, num_channels
 
 patch_size = 5

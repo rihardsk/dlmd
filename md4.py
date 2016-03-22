@@ -8,7 +8,7 @@ from six.moves import range
 import time
 import os
 import datetime
-from notmnist_conv import inference, training, evaluation, do_eval, loss, batch_size
+from notmnist_conv import inference, training, evaluation, do_eval, loss, batch_size, accuracy
 from notmnist_input import train_dataset, train_labels, valid_dataset, valid_labels, test_dataset, test_labels
 
 
@@ -42,6 +42,7 @@ with graph.as_default():
     train_op = training(loss_op)
 
     evaluate_op = evaluation(logits_op, label_batch)
+    accuracy_op = accuracy(logits_op, label_batch)
 
     summary_op = tf.merge_all_summaries()
 
@@ -88,13 +89,11 @@ with tf.Session(graph=graph) as session:
         # feed_dict = {images_initializer: batch_data, labels_initializer: batch_labels, keep1_prob: 0.9, keep2_prob: 0.8, keep3_prob: 0.7}
         feed_dict = {keep1_prob: 0.5}
         # feed_dict = {input_images : batch_data, input_labels : batch_labels, keep1_prob: 1, keep2_prob: 1, keep3_prob: 1}
-        _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
-        if step % 100 == 0:
-            summary_str = session.run(summary_op, feed_dict=feed_dict)
-            summary_writer.add_summary(summary_str, step)
-        if step % 100 == 0:
+        if step % 500 != 0:
+            _, l = session.run([train_op, loss_op], feed_dict=feed_dict)
+        else:
+            _, l, train_accuracy = session.run([train_op, loss_op, accuracy_op], feed_dict=feed_dict)
             validation_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, valid_dataset, valid_labels)
-            train_accuracy = do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, train_dataset, train_labels)
 
             summary_str = session.run(accuracy_summary_op, feed_dict={valid_accuracy_ph: validation_accuracy,
                                                                       batch_accuracy_ph: train_accuracy})
@@ -115,6 +114,9 @@ with tf.Session(graph=graph) as session:
                 print("Validation accuracy not improved for %i evaluations. Stopping early!" % wait_for_improvement)
                 break
             stepstart = stepend
+        if step % 100 == 0:
+            summary_str = session.run(summary_op, feed_dict=feed_dict)
+            summary_writer.add_summary(summary_str, step)
 
     saver.restore(session, savepath)
     print("\nTest accuracy: %.1f%%" % do_eval(session, evaluate_op, image_batch, label_batch, keep_probs, test_dataset, test_labels))

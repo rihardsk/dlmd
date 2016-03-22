@@ -102,9 +102,16 @@ def evaluation(logits, labels):
     return tf.reduce_sum(tf.cast(correct, tf.int32))
 
 
+def accuracy(logits, labels):
+    predictions = tf.nn.softmax(logits)
+    correct = tf.equal(tf.argmax(predictions, 1), tf.argmax(labels, 1))
+    return tf.reduce_mean(tf.cast(correct, tf.float32)) * 100
+
+
 def do_eval(sess, eval_correct, images_placeholder, labels_placeholder, keep_prob_placeholders, images, labels):
     correct_count = 0
     for img_batch, label_batch in zip(get_batches(images), get_batches(labels)):
+        img_batch = np.reshape(img_batch, (-1, image_size ** 2))
         feed_dict = {
             images_placeholder: img_batch,
             labels_placeholder: label_batch,
